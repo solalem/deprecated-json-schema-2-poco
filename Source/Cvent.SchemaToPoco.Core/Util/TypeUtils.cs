@@ -10,13 +10,13 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// <summary>
         ///     What primitive objects map to in C#.
         /// </summary>
-        private static readonly Dictionary<string, string> Primitives = new Dictionary<string, string>
+        private static readonly Dictionary<JSchemaType, string> Primitives = new Dictionary<JSchemaType, string>
         {
-            {"String", "System.String"},
-            {"Float", "System.Single"},
-            {"Integer", "System.Int32"},
-            {"Boolean", "System.Boolean"},
-            {"Object", "System.Object"}
+            {JSchemaType.String, "System.String"},
+            {JSchemaType.Number, "System.Single"},
+            {JSchemaType.Integer, "System.Int32"},
+            {JSchemaType.Boolean, "System.Boolean"},
+            {JSchemaType.Object, "System.Object"}
         };
 
         /// <summary>
@@ -34,23 +34,19 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// </summary>
         /// <param name="type">The type.</param>
         /// <returns>The primitive type as a string, if it exists.</returns>
-        public static string GetPrimitiveTypeAsString(JsonSchemaType? type)
+        public static string GetPrimitiveTypeAsString(JSchemaType? type)
         {
-            string sType = type.ToString();
-            return Primitives.ContainsKey(sType) ? Primitives[sType] : "System.Object";
+            if (type != null)
+            {
+                foreach (var prim in Primitives)
+                {
+                    // Return the first enum
+                    if (type.Value.HasFlag(prim.Key))
+                        return prim.Value;
+                }
+            }
+            return "System.Object";
         }
 
-        /// <summary>
-        ///     Get the primitive name of a type if it exists.
-        /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns>The primitive type, if it exists.</returns>
-        public static string GetPrimitiveType(Type type)
-        {
-            string sType = type.ToString();
-            Console.WriteLine(sType);
-
-            return Primitives.ContainsKey(sType) ? Primitives[sType] : sType;
-        }
     }
 }

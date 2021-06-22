@@ -40,7 +40,7 @@ namespace Cvent.SchemaToPoco.Core
         /// <summary>
         ///     Resolving schemas so that they can be parsed.
         /// </summary>
-        private readonly Newtonsoft.Json.Schema.JsonSchemaResolver _resolver = new Newtonsoft.Json.Schema.JsonSchemaResolver();
+        //private readonly Newtonsoft.Json.Schema.JSchemaResolver _resolver = new Newtonsoft.Json.Schema.JSchemaResolver();
 
         /// <summary>
         ///     Keeps track of the found schemas.
@@ -89,7 +89,7 @@ namespace Cvent.SchemaToPoco.Core
         /// </summary>
         /// <param name="parent">Path to the parent file.</param>
         /// <param name="current">Path to the current file.</param>
-        /// <returns>An extended wrapper for the JsonSchema.</returns>
+        /// <returns>An extended wrapper for the JSchema.</returns>
         /// TODO check if parent is needed - right now it assumes parent for all children
         private JsonSchemaWrapper ResolveSchemaHelper(Uri parent, Uri current)
         {
@@ -166,20 +166,20 @@ namespace Cvent.SchemaToPoco.Core
             } 
 
             // Set up schema and wrapper to return
-            JsonSchema parsed;
+            JSchema parsed;
 
             try
             {
-                parsed = JsonSchema.Parse(StandardizeReferences(parent, data), _resolver);
+                parsed = JSchema.Parse(StandardizeReferences(parent, data));
             }
             catch (Exception)
             {
                 _log.Error("Could not parse the schema: " + curr + "\nMake sure your schema is compatible." +
-                           "Examine the stack trace below.");
+                           " Examine the stack trace below.");
                 throw;
             }
 
-            parsed.Id = curr.ToString();
+            parsed.Id = curr;
             parsed.Title = parsed.Title.SanitizeIdentifier();
             var toReturn = new JsonSchemaWrapper(parsed) { Namespace = _ns, Dependencies = dependencies };
 
@@ -252,7 +252,7 @@ namespace Cvent.SchemaToPoco.Core
         /// <param name="data">The JSON schema.</param>
         public static JsonSchemaWrapper ConvertToWrapper(string data)
         {
-            return new JsonSchemaWrapper(JsonSchema.Parse(data));
+            return new JsonSchemaWrapper(JSchema.Parse(data));
         }
     }
 }

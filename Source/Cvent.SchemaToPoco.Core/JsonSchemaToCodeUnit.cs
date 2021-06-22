@@ -11,7 +11,7 @@ using Newtonsoft.Json.Schema;
 namespace Cvent.SchemaToPoco.Core
 {
     /// <summary>
-    ///     Model for converting a JsonSchema to a CodeCompileUnit
+    ///     Model for converting a JSchema to a CodeCompileUnit
     /// </summary>
     public class JsonSchemaToCodeUnit
     {
@@ -21,12 +21,12 @@ namespace Cvent.SchemaToPoco.Core
         private readonly string _codeNamespace;
 
         /// <summary>
-        ///     The JsonSchema, for easy access.
+        ///     The JSchema, for easy access.
         /// </summary>
-        private readonly JsonSchema _schemaDocument;
+        private readonly JSchema _schemaDocument;
 
         /// <summary>
-        ///     The extended JsonSchema wrapper.
+        ///     The extended JSchema wrapper.
         /// </summary>
         private readonly JsonSchemaWrapper _schemaWrapper;
 
@@ -60,62 +60,76 @@ namespace Cvent.SchemaToPoco.Core
         public CodeCompileUnit Execute()
         {
             var codeCompileUnit = new CodeCompileUnit();
-
             // Set namespace
             var nsWrap = new NamespaceWrapper(new CodeNamespace(_codeNamespace));
-
-            // Set class
-            var codeClass = new CodeTypeDeclaration(_schemaDocument.Title) {Attributes = MemberAttributes.Public};
-            var clWrap = new ClassWrapper(codeClass);
-
             // Add imports for interfaces and dependencies
             nsWrap.AddImportsFromWrapper(_schemaWrapper);
 
+            // Main schema definition
+            SchemaToClass(nsWrap, _schemaDocument);
+
+            // Definitions
+            foreach (var schema in _schemaDocument.Items)
+            {
+                SchemaToClass(nsWrap, schema);
+            }
+
+            codeCompileUnit.Namespaces.Add(nsWrap.Namespace);
+
+            return codeCompileUnit;
+        }
+
+        private void SchemaToClass(NamespaceWrapper nsWrap, JSchema classSchema)
+        {
+            // Set class
+            var className = classSchema.Title.SanitizeIdentifier();
+
+            var codeClass = new CodeTypeDeclaration(className) { Attributes = MemberAttributes.Public };
+            var clWrap = new ClassWrapper(codeClass);
+
+            //// todo: add extended class
+            //if (schema.ExtensionData != null && schema.ExtensionData.Count > 0)
+            //{
+            //    clWrap.AddInterface(JsonSchemaUtils.GetType(schema.ExtensionData[0], _codeNamespace).name);
+            //}
+
             // Add comments and attributes for class
-            if (!String.IsNullOrEmpty(_schemaDocument.Description))
+            if (!String.IsNullOrEmpty(classSchema.Description))
             {
-                clWrap.AddComment(_schemaDocument.Description);
+                clWrap.AddComment(classSchema.Description);
             }
-
-            // Add extended class
-            if (_schemaDocument.Extends != null && _schemaDocument.Extends.Count > 0)
-            {
-                clWrap.AddInterface(JsonSchemaUtils.GetType(_schemaDocument.Extends[0], _codeNamespace).Name);
-            }
-
             // Add interfaces
             foreach (Type t in _schemaWrapper.Interfaces)
             {
                 clWrap.AddInterface(t.Name);
             }
 
-            // Add properties with getters/setters
-            if (_schemaDocument.Properties != null)
+            // Sanitize inputs
+            if (!String.IsNullOrEmpty(classSchema.Description))
             {
-                foreach (var i in _schemaDocument.Properties)
+                classSchema.Description = Regex.Unescape(classSchema.Description);
+            }
+
+            // Add properties with getters/setters
+            if (classSchema.Properties != null)
+            {
+                foreach (var i in classSchema.Properties)
                 {
-                    JsonSchema schema = i.Value;
-
-                    // Sanitize inputs
-                    if (!String.IsNullOrEmpty(schema.Description))
-                    {
-                        schema.Description = Regex.Unescape(schema.Description);
-                    }
-
+                    var propertySchema = i.Value;
                     // If it is an enum
                     var propertyName = i.Key.Capitalize();
-                    if (schema.Enum != null)
+                    if (propertySchema.Enum != null && propertySchema.Enum.Count > 0)
                     {
                         var enumField = new CodeTypeDeclaration(propertyName);
                         var enumWrap = new EnumWrapper(enumField);
 
                         // Add comment if not null
-                        if (!String.IsNullOrEmpty(schema.Description))
+                        if (!String.IsNullOrEmpty(propertySchema.Description))
                         {
-                            enumField.Comments.Add(new CodeCommentStatement(schema.Description));
+                            enumField.Comments.Add(new CodeCommentStatement(propertySchema.Description));
                         }
 
-                        foreach (JToken j in schema.Enum)
+                        foreach (JToken j in propertySchema.Enum)
                         {
                             enumWrap.AddMember(j.ToString().SanitizeIdentifier());
                         }
@@ -127,22 +141,26 @@ namespace Cvent.SchemaToPoco.Core
                     {
                         // WARNING: This assumes the namespace of the property is the same as the parent.
                         // This should not be a problem since imports are handled for all dependencies at the beginning.
-                        Type type = JsonSchemaUtils.GetType(schema, _codeNamespace);
+                        Type type = JsonSchemaUtils.GetType(propertySchema, _codeNamespace);
                         bool isCustomType = type.Namespace != null && type.Namespace.Equals(_codeNamespace);
                         string strType = String.Empty;
 
                         // Add imports
                         nsWrap.AddImport(type.Namespace);
-                        nsWrap.AddImportsFromSchema(schema);
+                        nsWrap.AddImportsFromSchema(propertySchema);
 
                         // Get the property type
                         if (isCustomType)
                         {
-                            strType = JsonSchemaUtils.IsArray(schema) ? string.Format("{0}<{1}>", JsonSchemaUtils.GetArrayType(schema), type.Name) : type.Name;
+                            strType = JsonSchemaUtils.IsArray(propertySchema) ? string.Format("{0}<{1}>", JsonSchemaUtils.GetArrayType(propertySchema), type.Name) : type.Name;
+                            if (propertySchema.Type == JSchemaType.Object)
+                                SchemaToClass(nsWrap, propertySchema);
+                            else if (propertySchema.Type == JSchemaType.Array && propertySchema.Items != null && propertySchema.Items.Count > 0)
+                                SchemaToClass(nsWrap, propertySchema.Items[0]);
                         }
-                        else if (JsonSchemaUtils.IsArray(schema))
+                        else if (JsonSchemaUtils.IsArray(propertySchema))
                         {
-                            strType = string.Format("{0}<{1}>", JsonSchemaUtils.GetArrayType(schema),
+                            strType = string.Format("{0}<{1}>", JsonSchemaUtils.GetArrayType(propertySchema),
                                 new CSharpCodeProvider().GetTypeOutput(new CodeTypeReference(type)));
                         }
 
@@ -156,22 +174,21 @@ namespace Cvent.SchemaToPoco.Core
                         //            : new CodeTypeReference(strType)
                         //};
 
-
                         //clWrap.Property.Members.Add(field);
 
-                        var property = CreateProperty(propertyName, TypeUtils.IsPrimitive(type) && !JsonSchemaUtils.IsArray(schema)
+                        var property = CreateProperty(propertyName, TypeUtils.IsPrimitive(type) && !JsonSchemaUtils.IsArray(propertySchema)
                                     ? new CodeTypeReference(type)
                                     : new CodeTypeReference(strType));
 
                         var prWrap = new PropertyWrapper(property);
 
                         // Add comments and attributes
-                        prWrap.Populate(schema, _attributeType);
+                        prWrap.Populate(propertySchema, _attributeType);
 
                         // Add default, if any
-                        if (schema.Default != null)
+                        if (propertySchema.Default != null)
                         {
-                            clWrap.AddDefault(propertyName, property.Type, schema.Default.ToString());
+                            clWrap.AddDefault(propertyName, property.Type, propertySchema.Default.ToString());
                         }
 
                         clWrap.Property.Members.Add(property);
@@ -180,10 +197,7 @@ namespace Cvent.SchemaToPoco.Core
             }
 
             // Add class to namespace
-            nsWrap.AddClass(clWrap.Property);
-            codeCompileUnit.Namespaces.Add(nsWrap.Namespace);
-
-            return codeCompileUnit;
+            nsWrap.AddClass(clWrap.Property);   
         }
 
         /// <summary>

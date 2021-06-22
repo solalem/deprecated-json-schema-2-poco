@@ -36,14 +36,26 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
         /// <param name="cl">The CodeDom class to add.</param>
         public void AddClass(CodeTypeDeclaration cl)
         {
-            Namespace.Types.Add(cl);
+            CodeTypeDeclaration existing = null;
+            foreach (var t in Namespace.Types)
+            {
+                var typ = t as CodeTypeDeclaration;
+                if (typ != null && typ.Name == cl.Name)
+                {
+                    existing = typ;
+                    break;
+                }
+            }
+
+            if (existing == null) 
+                Namespace.Types.Add(cl);
         }
 
         /// <summary>
         ///     Adds imports for attributes and lists.
         /// </summary>
         /// <param name="schema">The schema to import from.</param>
-        public void AddImportsFromSchema(JsonSchema schema)
+        public void AddImportsFromSchema(JSchema schema)
         {
             // Arrays
             if (JsonSchemaUtils.IsArray(schema))
@@ -58,7 +70,7 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
             }
 
             // Required | StringLength | MinItems | MaxItems | Pattern
-            if ((schema.Required != null && schema.Required.Value) || schema.MaximumLength != null ||
+            if ((schema.Required != null) || schema.MaximumLength != null ||
                 schema.MinimumLength != null
                 || schema.MinimumItems != null || schema.MaximumItems != null || schema.Pattern != null)
             {

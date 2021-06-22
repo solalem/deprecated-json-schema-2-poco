@@ -6,7 +6,7 @@ using Newtonsoft.Json.Schema;
 namespace Cvent.SchemaToPoco.Core.Wrappers
 {
     /// <summary>
-    ///     Wrapper for a JsonSchema.
+    ///     Wrapper for a JSchema.
     /// </summary>
     public class JsonSchemaWrapper
     {
@@ -15,7 +15,7 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
         /// </summary>
         public const string DEFAULT_CLASS_NAME = "DefaultClassName";
 
-        public JsonSchemaWrapper(JsonSchema schema)
+        public JsonSchemaWrapper(JSchema schema)
         {
             Schema = schema;
 
@@ -40,9 +40,9 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
         }
 
         /// <summary>
-        ///     The JsonSchema.
+        ///     The JSchema.
         /// </summary>
-        public JsonSchema Schema { get; set; }
+        public JSchema Schema { get; set; }
 
         /// <summary>
         ///     Namespace for this JSON schema to use.

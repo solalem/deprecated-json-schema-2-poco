@@ -5,7 +5,7 @@ using Newtonsoft.Json.Schema;
 namespace Cvent.SchemaToPoco.Core.Util
 {
     /// <summary>
-    ///     Common utilities for a JsonSchema.
+    ///     Common utilities for a JSchema.
     /// </summary>
     public static class JsonSchemaUtils
     {
@@ -19,7 +19,7 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// </summary>
         /// <param name="schema">The JSON shema.</param>
         /// <returns>True if it is an integer.</returns>
-        public static bool IsNumber(JsonSchema schema)
+        public static bool IsNumber(JSchema schema)
         {
             return schema.Type != null &&
                    (schema.Type.Value.ToString().Equals("Integer") || schema.Type.Value.ToString().Equals("Float"));
@@ -30,7 +30,7 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// </summary>
         /// <param name="schema">The JSON shema.</param>
         /// <returns>True if it is an string.</returns>
-        public static bool IsString(JsonSchema schema)
+        public static bool IsString(JSchema schema)
         {
             return schema.Type != null && schema.Type.Value.ToString().Equals("String");
         }
@@ -40,9 +40,9 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// </summary>
         /// <param name="schema">The JSON shema.</param>
         /// <returns>True if it is an array.</returns>
-        public static bool IsArray(JsonSchema schema)
+        public static bool IsArray(JSchema schema)
         {
-            return schema.Type != null && schema.Type.Value.ToString().Equals("Array");
+            return schema.Type != null && schema.Type.Value.ToString().Contains("Array");
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// <param name="schema">The schema.</param>
         /// <exception cref="System.NotSupportedException">Thrown when given schema is not an array type.</exception>
         /// <returns>The array type of the schema.</returns>
-        public static ArrayType GetArrayType(JsonSchema schema)
+        public static ArrayType GetArrayType(JSchema schema)
         {
             if (!IsArray(schema))
             {
@@ -67,7 +67,7 @@ namespace Cvent.SchemaToPoco.Core.Util
         /// <param name="schema">The JSON schema.</param>
         /// <param name="ns">The namespace.</param>
         /// <returns>The type of the schema.</returns>
-        public static Type GetType(JsonSchema schema, string ns = "")
+        public static Type GetType(JSchema schema, string ns = "")
         {
             string toRet = DEFAULT_TYPE;
             var builder = new TypeBuilderHelper(ns);
@@ -75,34 +75,34 @@ namespace Cvent.SchemaToPoco.Core.Util
             // Set the type to the type if it is not an array
             if (!IsArray(schema))
             {
-                if (schema.Title != null)
+                if (schema.Type == JSchemaType.Object && schema.Title != null)
                 {
                     return builder.GetCustomType(schema.Title, true);
                 }
-                if (schema.Type != null)
+                else
                 {
                     toRet = TypeUtils.GetPrimitiveTypeAsString(schema.Type);
                 }
             }
             else
             {
-                // Set the type to the title if it exists
-                if (schema.Title != null)
-                {
-                    return builder.GetCustomType(schema.Title, true);
-                }
                 if (schema.Items != null && schema.Items.Count > 0)
                 {
                     // Set the type to the title of the items
-                    if (schema.Items[0].Title != null)
+                    if (schema.Items[0].Type == JSchemaType.Object && schema.Items[0].Title != null)
                     {
                         return builder.GetCustomType(schema.Items[0].Title, true);
                     }
-                        // Set the type to the type of the items
-                    if (schema.Items[0].Type != null)
+                    // Set the type to the type of the items
+                    else
                     {
                         toRet = TypeUtils.GetPrimitiveTypeAsString(schema.Items[0].Type);
                     }
+                }
+                // Set the type to the title if it exists
+                else if (schema.Title != null)
+                {
+                    return builder.GetCustomType(schema.Title, true);
                 }
             }
 

@@ -19,9 +19,9 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
         /// <summary>
         ///     Add all comments and attributes.
         /// </summary>
-        /// <param name="schema">The JsonSchema.</param>
+        /// <param name="schema">The JSchema.</param>
         /// <param name="type">Annotation type to generate.</param>
-        public void Populate(JsonSchema schema, AttributeType type)
+        public void Populate(JSchema schema, AttributeType type)
         {
             // Add description
             if (schema.Description != null)
@@ -30,7 +30,7 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
             }
 
             // Add required attribute
-            if (schema.Required != null && schema.Required.Value)
+            if (schema.Required != null)
             {
                 /*switch (type)
                 {
@@ -51,25 +51,25 @@ namespace Cvent.SchemaToPoco.Core.Wrappers
             {
                 if (schema.Minimum != null)
                 {
-                    if (schema.ExclusiveMinimum != null && schema.ExclusiveMinimum.Value)
-                    {
+                    //if (schema.ExclusiveMinimum != null)
+                    //{
                         AddAttribute("MinValue", (int) schema.Minimum.Value + 1);
-                    }
-                    else
-                    {
-                        AddAttribute("MinValue", (int) schema.Minimum.Value);
-                    }
+                    //}
+                    //else
+                    //{
+                    //    AddAttribute("MinValue", (int) schema.Minimum.Value);
+                    //}
                 }
                 if (schema.Maximum != null)
                 {
-                    if (schema.ExclusiveMaximum != null && schema.ExclusiveMaximum.Value)
-                    {
+                    //if (schema.ExclusiveMaximum != null && schema.ExclusiveMaximum.Value)
+                    //{
                         AddAttribute("MaxValue", (int) schema.Maximum.Value - 1);
-                    }
-                    else
-                    {
-                        AddAttribute("MaxValue", (int) schema.Maximum.Value);
-                    }
+                    //}
+                    //else
+                    //{
+                    //    AddAttribute("MaxValue", (int) schema.Maximum.Value);
+                    //}
                 }
             }
 
