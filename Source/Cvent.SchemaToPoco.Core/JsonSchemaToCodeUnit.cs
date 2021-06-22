@@ -65,14 +65,14 @@ namespace Cvent.SchemaToPoco.Core
             // Add imports for interfaces and dependencies
             nsWrap.AddImportsFromWrapper(_schemaWrapper);
 
-            // Main schema definition
+            // Main class
             SchemaToClass(nsWrap, _schemaDocument);
 
-            // Definitions
-            foreach (var schema in _schemaDocument.Items)
-            {
-                SchemaToClass(nsWrap, schema);
-            }
+            //// Definitions
+            //foreach (var schema in _schemaDocument.Items)
+            //{
+            //    SchemaToClass(nsWrap, schema);
+            //}
 
             codeCompileUnit.Namespaces.Add(nsWrap.Namespace);
 

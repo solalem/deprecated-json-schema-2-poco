@@ -48,6 +48,7 @@ namespace Cvent.SchemaToPoco.Core.Util
             // http://, https://
             if (path.ToString().StartsWith("http"))
             {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 using (var client = new WebClient())
                 {
                     return client.DownloadString(path);
